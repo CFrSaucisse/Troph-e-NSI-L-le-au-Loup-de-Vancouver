@@ -1,3 +1,0 @@
-<img width="813" height="440" alt="image" src="https://github.com/user-attachments/assets/e49e02a8-8e87-43df-b1a3-d4e9dffa6485" />
-
-Si chacun rêve d’un paradis, d’un endroit paisible, d’une nature apaisante ; d’autres les ont déjà trouvés. Ce n’est pas une plage, une montagne ou encore une île polynésienne. Ce ne sont pas non plus des humains qui y vivent. Sur l’île de Vancouver, au Canada, des dizaines de loups vivent en meute. Ils pêchent, courent, mangent et sont tranquillement isolés du monde hostile. Alors, qu’attendez-vous pour rejoindre l’aventure dans la peau d’un magnifique loup ?
