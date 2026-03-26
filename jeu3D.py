@@ -35,10 +35,6 @@ ANIMAL_POSITIONS = {
         (12.24, 3, 38.12), (-45.98, 3, 158.47), (-19.6, 3, 197.06), (23.53, 3, 184.62),
         (-44.95, 3, 286.87), (-10.59, 3, 261.14), (28.7, 3, 221.07), (-34.14, 3, 300.91),
         (-5.9, 3, 362.64), (26.89, 3, 353.44), (-0.16, 3, 77.28), (-47.37, 3, 14.96)
-    ],
-    'adventurer': [
-        (-32.26, 3, 183.78), (-3.35, 3, 211.85), (-57.52, 3, 230.73), (-31.62, 3, 276.08),
-        (-13.05, 3, 278.47), (24.91, 3, 264.92), (-48.37, 3, 348.93), (26.07, 3, 306.29)
     ]
 }
 
@@ -47,42 +43,41 @@ ANIMAL_COUNTS = {
     'deer': 12,
     'loutre': 12,
     'rabbit': 14,
-    'adventurer': 7
 }
 
 ANIMAL_CONFIGS = {
     'bear': {
-        'hp': 70,
+        'hp': 60,
         'taille': 4,
         'vitesse_marche': 5,
         'vitesse_fuite': 6,
-        'entity_scale': 1,
+        'entity_scale': 0.2,
         'model_path': 'model/Blackbear.glb',
         'model_scale': (0.5, 0.5, 0.5),
         'model_hpr': (0, 0, 0),
     },
     'deer': {
-        'hp': 50,
+        'hp': 40,
         'taille': 4,
         'vitesse_marche': 5,
         'vitesse_fuite': 6,
-        'entity_scale': 1,
-        'model_path': 'model/Stag.glb',
+        'entity_scale': 1.5,
+        'model_path': 'model/Deer.glb',
         'model_scale': (1, 1, 1),
         'model_hpr': (0, 0, 0),
     },
     'loutre': {
-        'hp': 50,
+        'hp': 25,
         'taille': 4,
         'vitesse_marche': 5,
         'vitesse_fuite': 6,
-        'entity_scale': 0.5,
+        'entity_scale': 0.2,
         'model_path': 'model/otter.glb',
         'model_scale': (0.5, 0.5, 0.5),
         'model_hpr': (0, 0, 0),
     },
     'rabbit': {
-        'hp': 25,
+        'hp': 10,
         'taille': 1,
         'vitesse_marche': 3,
         'vitesse_fuite': 7,
@@ -91,63 +86,7 @@ ANIMAL_CONFIGS = {
         'model_scale': (1, 1, 1),
         'model_hpr': (0, 0, 0),
     },
-    'adventurer': {
-        'hp': 100,
-        'taille': 2.5,
-        'vitesse_marche': 5,
-        'vitesse_fuite': 8,
-        'entity_scale': 1,
-        'model_path': 'model/Adventurer.glb',
-        'model_scale': (1, 1, 1),
-        'model_hpr': (0, 0, 0),
-    },
 }
-
-
-class SimpleAnimationController:
-    def __init__(self, entity, model_path, scale=(1, 1, 1),
-                 pos_offset=(0, 0, 0), hpr_offset=(0, 0, 0)):
-        self.entity = entity
-        self.actor = None
-        self.current_anim = 'idle'
-        
-        try:
-            self.actor = PandaActor(model_path)
-            self.actor.reparentTo(entity)
-            self.actor.setScale(*scale)
-            self.actor.setPos(*pos_offset)
-            if hpr_offset != (0, 0, 0):
-                self.actor.setHpr(*hpr_offset)
-        except Exception as exc:
-            pass
-    
-    def update_locomotion(self, vx, vz, vy=0, sprinting=False, in_air=False):
-        pass
-    
-    def play_once(self, name, then='idle'):
-        pass
-    
-    def play(self, name, loop=True, restart=False):
-        pass
-    
-    def set_shader(self, ursina_shader):
-        if not self.actor:
-            return
-        try:
-            if ursina_shader is None:
-                self.actor.clearShader()
-            else:
-                p3d_shader = (getattr(ursina_shader, '_shader', None)
-                              or getattr(ursina_shader, 'compiled', None)
-                              or ursina_shader)
-                self.actor.setShader(p3d_shader)
-        except Exception:
-            pass
-    
-    def cleanup(self):
-        if self.actor:
-            self.actor.cleanup()
-
 
 class AnimationController:
 
@@ -435,6 +374,7 @@ class Joueur(Entite):
         self.endurance_cooldown_duree = 3
         self.en_cooldown = False
         self.faim = 100
+        self.max_faim = 100
         self.nb_pommes = 0
         self._sprinting = False
 
@@ -596,14 +536,7 @@ class animaux(Entite):
         self._blocage_timer       = random.uniform(0, 1.0)
         self._deblocage_timer     = 0.0    
 
-        self.anim_ctrl = None
-        if model_path and entity is not None:
-            self.anim_ctrl = SimpleAnimationController(
-                entity,
-                model_path,
-                scale=model_scale if isinstance(model_scale, tuple) else (model_scale,) * 3,
-                hpr_offset=model_hpr
-            )
+
 
     def vision(self, joueur):
         distance = (joueur.entity.position - self.entity.position).length_squared()
@@ -627,11 +560,11 @@ class animaux(Entite):
             self.reaction.aggresif(self, joueur, dt)
             
             if self._attaque_cooldown <= 0:
-                if abs(joueur.entity.position-self.entity.position)< self.portée:
+                distance = (joueur.entity.position - self.entity.position).length()
+                if distance < self.portée:
                     self._attaque_cooldown = self.attaque_cooldown_duree
                     joueur.hp -= self.attaque_degats
-                    if self.anim_ctrl:
-                        self.anim_ctrl.play_once('attack', then='idle')
+                    
 
     def rotation_vers_mouvement(self, dt):
         direction = Vec3(self.vx, 0, self.vz)
@@ -684,15 +617,6 @@ class animaux(Entite):
                 self, Vec3(self.vx, self.vy, self.vz), dt, self.terrain
             )
             MoteurPhysique.gerer_collisions_sol(self)
-
-            if self.anim_ctrl:
-                if self.anim_ctrl.current_anim != 'attack':
-                    self.anim_ctrl.update_locomotion(
-                        self.vx, self.vz,
-                        vy=self.vy,
-                        sprinting=(self.etat in ("fuite", "agressif")),
-                        in_air=self.air
-                    )
 
 
 class Tterrain:
@@ -760,7 +684,7 @@ class Tterrain:
                 center=PINE_CENTER,
                 size=PINE_SIZE
             )
-            tree.collider.visible = True
+            tree.collider.visible = False
             self.tree.append(tree)
 
 
@@ -871,7 +795,7 @@ class MenuPrincipal:
         self.elements.append(self.btn_quitter)
 
         self.hint = Text(
-            text='ZQSD : déplacer  |  Espace : sauter  |  Shift : sprint  |  Clic gauche : attaquer',
+            text='ZQSD : déplacer  |  Espace : sauter  |  Shift : sprint  |  Clic gauche : attaquer  |  P : Fermer le jeu  |  F : manger les pommes',
             parent=camera.ui,
             origin=(0, 0),
             position=(0, -0.35),
@@ -987,6 +911,7 @@ class MenuMort:
 
 class Jeu:
     def __init__(self):
+        mouse.visible = True
         self.terrain = Tterrain()
         self.chunk_manager = ChunkManager()
         self.joueur = Joueur(0, 200, 0, terrain=self.terrain.sol)
@@ -998,6 +923,8 @@ class Jeu:
             on_menu=self.retour_menu,
             on_quitter=application.quit
         )
+        self._cooldown_attaque = 0
+        self._delai_attaque = 0.3
 
         self._chunk_manager_ready = False
         self.pos_squirel = []
@@ -1029,28 +956,33 @@ class Jeu:
     def _creer_animal(self, animal_type, position, spawn_index):
         config = ANIMAL_CONFIGS[animal_type]
         position = Vec3(position[0], position[1], position[2])
+
+        animal_entity = Entity(
+            model=config['model_path'],   # 🔥 modèle DIRECT
+            position=position,
+            scale=config['entity_scale'],
+            collider='box',
+            rotation=config['model_hpr']
+        )
+
         animal = animaux(
             hp=config['hp'],
             type=animal_type,
-            entity=Entity(
-                position=position,
-                collider='box',
-                scale=config['entity_scale']
-            ),
+            entity=animal_entity,
             taille=config['taille'],
             vitesse_marche=config['vitesse_marche'],
             vitesse_fuite=config['vitesse_fuite'],
             numero=spawn_index,
-            model_path=config['model_path'],
-            model_scale=config['model_scale'],
-            model_hpr=config['model_hpr'],
             spawn_index=spawn_index
         )
+
         animal.terrain = self.terrain.sol
         self.animaux.append(animal)
+
         if self._chunk_manager_ready:
             self.chunk_manager.enregistrer(animal)
             self._reconstruire_entites_dynamiques()
+
         return animal
 
     def _position_sur_sol(self, x, z, y_depart=250):
@@ -1132,6 +1064,33 @@ class Jeu:
             return
 
         self.joueur.update()
+        # cooldown
+        self._cooldown_attaque -= time.dt
+
+        if held_keys['left mouse']:
+            hit = raycast(
+                camera.world_position,
+                camera.forward,
+                distance=50,
+                ignore=[self.joueur.entity, *self.joueur.entity.children]
+            )
+
+            if hit.hit and hit.entity:
+                for animal in self.animaux:
+                    if hit.entity == animal.entity:
+                        if self._cooldown_attaque <= 0:
+                            self._cooldown_attaque = self._delai_attaque
+                            self.joueur.anim_ctrl.play_once('attack', then='idle')
+
+                            animal.entity.color = color.red
+                            animal.entity.shader = unlit_shader
+
+                            animal.hp -= 5
+
+                            if animal.hp <= 0 and self.joueur.max_faim>self.joueur.faim:
+                                self.joueur.faim += 20
+
+                            break
         self.chunk_manager.chunks_actifs(self.joueur.entity.position)
 
         if held_keys['p']:
@@ -1154,11 +1113,7 @@ class Jeu:
                     animal.vx = 0
                     animal.vy = 0
                     animal.vz = 0
-                    if animal.anim_ctrl and animal.anim_ctrl.current_anim != 'death':
-                        animal.anim_ctrl.play_once('death', then='death')
-                        invoke(self._supprimer_animal, animal, delay=1.5)
-                    else:
-                        self._supprimer_animal(animal)
+                    invoke(self._supprimer_animal, animal, delay=0.5)
                 continue
 
             if not animal.entity.enabled:
@@ -1172,8 +1127,7 @@ class Jeu:
             if animal._current_shader is not nouveau_shader and animal.timer <= 0:
                 animal.timer = 0.5
                 animal._current_shader = nouveau_shader
-                if animal.anim_ctrl:
-                    animal.anim_ctrl.set_shader(nouveau_shader)
+                animal.entity.shader = nouveau_shader
 
             animal.update(self.joueur)
 
@@ -1200,8 +1154,6 @@ class Jeu:
     def _supprimer_animal(self, animal):
         if animal not in self.animaux:
             return
-        if animal.anim_ctrl:
-            animal.anim_ctrl.cleanup()
         self.chunk_manager.supprimer(animal)
         destroy(animal.entity)
         self.animaux.remove(animal)
@@ -1243,28 +1195,13 @@ def update():
 
 
 def input(key):
+    global jeu
     if jeu is None:
         return
     if key == 'p':
         application.quit()
     if key == 'f':
         jeu.joueur.manger_pomme()
-    if key == 'left mouse down':
-        hit = raycast(camera.world_position, camera.forward, distance=20,
-                      ignore=[jeu.joueur.entity])
-        if hit.hit:
-            entite_touchee = hit.entity
-            animaux_touchee = None
-            for animal in jeu.animaux:
-                if animal.entity == entite_touchee:
-                    animaux_touchee = animal
-                    break
-            if animaux_touchee is not None:
-                jeu.joueur.anim_ctrl.play_once('attack', then='idle')
-                animaux_touchee.entity.color = color.red
-                animaux_touchee.hp -= 5
-                if animaux_touchee.hp <= 0:
-                    jeu.joueur.faim += 20
 
 
 app.run()
